@@ -11,7 +11,8 @@ exports.getAllPosts = (req, res) => {
                     postId: doc.id,
                     body: doc.data().body,
                     userHandle: doc.data().userHandle,
-                    createdAt: doc.data().createdAt
+                    createdAt: doc.data().createdAt,
+                    tag: doc.data().tag
                 });
             });
             return res.json(posts)
@@ -27,7 +28,8 @@ exports.createNewPost = (req, res) => {
     const newPost = {
         body: req.body.body,
         userHandle: req.user.handle,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        tag: req.body.tag
     }
 
     db.collection('posts')
