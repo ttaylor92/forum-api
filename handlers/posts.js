@@ -29,7 +29,7 @@ exports.createNewPost = (req, res) => {
         body: req.body.body,
         userHandle: req.user.handle,
         createdAt: new Date().toISOString(),
-        tag: req.body.tag
+        tag: [req.body.tag]
     }
 
     db.collection('posts')

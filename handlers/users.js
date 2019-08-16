@@ -2,7 +2,7 @@ const { db, admin } = require('../utilities/admin');
 const firebase = require('firebase');
 
 const config = require('../utilities/config');
-const { validateSignupData, validateLoginData } = require('../utilities/validation');
+const { validateSignupData, validateLoginData, reduceUserDetails } = require('../utilities/validation');
 
 firebase.initializeApp(config);
 
@@ -59,6 +59,46 @@ exports.signup = (req, res) => {
         })
 }
 
+exports.addUserDetails = (req, res) => {
+    let userDetails = reduceUserDetails(req.body);
+
+    db.doc(`/users/${req.user.handle}`)
+        .update(userDetails)
+        .then(() => {
+            res.json({ message: 'Details have been successfully updated'})
+        })
+        .catch(err => {
+            console.error(err)
+            return res.status(500).json({ error: err.code })
+        })
+}
+
+exports.getAuthenticatedUser = (req, res) => {
+    let userData = {};
+
+    db.doc(`/users/${req.user.handle}`)
+        .get()
+        .then(doc => {
+            if(doc.exists){
+                userData.credentials = doc.data();
+                //checks to see likes for user
+                return db.collection('likes').where('userHandle', '==', req.user.handle).get();
+            }
+        })
+        .then(data => {
+            userData.likes = [];
+            data.forEach(doc => {
+                userData.likes.push(doc.data());
+            })
+
+            return res.json(userData);
+        })
+        .catch(err => {
+            console.error(err)
+            return res.status(500).json({ error: err.code })
+        })
+}
+
 exports.login = (req, res) => {
     const user ={
         email: req.body.email,
@@ -89,14 +129,18 @@ let imageFileName;
 let imageToBeUploaded = {};
 
 exports.uploadImage = (req, res) =>{
-    const busboy = require('busboy');
+    const Busboy = require('busboy');
     const path = require('path');
     const os = require('os');
     const fs = require('fs');
 
-    const busboy = new busboy({ headers: req.headers });
+    const busboy = new Busboy({ headers: req.headers });
 
-    busboy.on('file', (feildname, file, filename, encoding, mimetype) => {
+    busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+        if(mimetype !== 'image/jpeg' && mimetype !== 'image/png'){
+            return res.status(400).json({ error: 'Incorrect filetype submitted'})
+        }
+        
         const imageExtension = filename.split('.')[filename.split('.').length - 1];
         //sequinsial number for filename followed by extension for online labeling
         imageFileName = `${Math.round(Math.random()*10000000000)}.${imageExtension}`;
@@ -128,4 +172,5 @@ exports.uploadImage = (req, res) =>{
             return res.status(500).json({ error: err.code })
         })
     })
+    busboy.end(req.rawBody);
 }
