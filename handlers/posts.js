@@ -42,3 +42,53 @@ exports.createNewPost = (req, res) => {
             console.error(err)
         })
 }
+
+exports.postNewComment = (req, res) =>{
+    if(req.body.body.trim() === '') return res.status(400).json({ error: 'Must not be empty'});
+
+    const newComment ={
+        body: req.body.body,
+        createdAt: new Date().toISOString(),
+        postId: req.params.postId,
+        userHandle: req.user.handle,
+        userImage: req.user.imageUrl
+    }
+
+    db.doc(`/posts/${req.params.postId}`).get()
+        .then(doc => {
+            if(!doc.exists){
+                return res.status(404).json({ error: "Post does not exist"})
+            }
+            return db.collection('comments').add(newComment)
+        })
+        .then(() => {
+            return res.json(newComment)
+        })
+        .catch(err => {
+            return res.status(500).json({ error: err.code})
+        })
+}
+
+exports.getPost = (req, res) =>{
+    let postData = {};
+    db.doc(`/posts/${req.params.postId}`)
+        .get()
+        .then(doc => {
+            if(!doc.exists){
+                return res.status(404).json({ error: 'Post not found'})
+            }
+            postData = doc.data();
+            postData.postId = doc.id;
+            return db.collection('comments').orderBy('createdAt', 'asc').where('postId', '==', req.params.postId).get();
+        })
+        .then(data => {
+            postData.comments = [];
+            data.forEach((doc) => {
+                postData.comments.push(doc.data());
+            })
+            return res.json(postData)
+        })
+        .catch(err => {
+            return res.status(500).json({ error: err.code })
+        })
+}

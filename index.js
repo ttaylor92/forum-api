@@ -2,7 +2,7 @@ const functions = require('firebase-functions');
 const app = require('express')();
 
 //Handlers
-const { getAllPosts, createNewPost } = require('./handlers/posts');  
+const { getAllPosts, createNewPost, postNewComment, getPost } = require('./handlers/posts');  
 const { signup, login, uploadImage, addUserDetails, getAuthenticatedUser } = require('./handlers/users');
 
 //utilities
@@ -11,6 +11,9 @@ const FBAuth = require('./utilities/fbauth');
 //Posts
 app.get('/posts', getAllPosts);
 app.post('/posts', FBAuth, createNewPost)
+//the colon tells the route that it needs this parameter
+app.post('/posts/:postId/comment', FBAuth, postNewComment)
+app.get('/posts/:postId', getPost)
 
 //users
 app.post('/signup', signup)
