@@ -67,6 +67,9 @@ exports.postNewComment = (req, res) =>{
             if(!doc.exists){
                 return res.status(404).json({ error: "Post does not exist"})
             }
+            return doc.ref.update({ commentCount: doc.data().commentCount + 1})
+        })
+        .then(() => {
             return db.collection('comments').add(newComment)
         })
         .then(() => {
@@ -138,4 +141,65 @@ exports.likeComments = (req, res) =>{
         console.error(err);
         return res.status(500).json({ error: err.code })
     })
+}
+
+exports.unlikeComments = (req, res) =>{
+    const likeDoc = db.collection('likes')
+        .where('userHandle', '==', req.user.handle)
+        .where('postId', '==', req.params.postId)
+        .limit(1);
+    //limit the query to one as it will return an array od data
+
+    const postDoc = db.doc(`/posts/${req.params.postId}`);
+    let postData;
+
+    postDoc.get()
+    .then(doc => {
+        if(doc.exists){
+            postData = doc.data();
+            postData.postId = doc.id;
+            return likeDoc.get();
+        } else return res.status(404).json({ error: 'Post not found'})
+    })
+    .then(data => {
+        if(data.empty){
+            return res.status(400).json({ error: 'Post has already been liked' })
+        } else {
+            return db.doc(`/likes/${data.docs[0].id}`).delete()
+            .then(() => {
+                postData.likeCount--
+                return postDoc.update({ likeCount: postData.likeCount })
+            })
+            .then(() => {
+                res.json(postData)
+            })
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        return res.status(500).json({ error: err.code })
+    })
+}
+
+exports.deletePost = (req, res) =>{
+    const post = db.doc(`/posts/${req.params.postId}`);
+
+    post.get()
+        .then(doc => {
+            if(!doc.exists){
+                return res.status(404).json({ error: 'Post does not exist' })
+            }
+            if(doc.data().userHandle !== req.user.handle){
+                return res.status(403).json({ error: 'Unauthorized' })
+            } else {
+                return post.delete()
+            }
+        })
+        .then(() => {
+            res.json({ message: 'Post has been deleted successfully' })
+        })
+        .catch(err => {
+            console.error(err);
+            return res.status(500).json({ error: err.code })
+        })
 }
