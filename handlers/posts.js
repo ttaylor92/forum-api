@@ -33,7 +33,7 @@ exports.createNewPost = (req, res) => {
         userHandle: req.user.handle,
         userImage: req.user.imageUrl,
         createdAt: new Date().toISOString(),
-        tag: [req.body.tag],
+        tag: req.body.tag,
         likeCount: 0,
         commentCount: 0
     }
@@ -52,7 +52,7 @@ exports.createNewPost = (req, res) => {
 }
 
 exports.postNewComment = (req, res) =>{
-    if(req.body.body.trim() === '') return res.status(400).json({ error: 'Must not be empty'});
+    if(req.body.body.trim() === '') return res.status(400).json({ comment: 'Must not be empty'});
 
     const newComment ={
         body: req.body.body,

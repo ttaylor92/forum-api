@@ -54,7 +54,7 @@ exports.signup = (req, res) => {
             if(err.code === 'auth/email-already-in-use'){
                 return res.status(400).json({ email: 'email is already in use'})
             } else {
-                return res.status(500).json({ error: error.code })
+                return res.status(500).json({ general: "Something went wrong, please try again", error: err })
             }
         })
 }
@@ -91,10 +91,61 @@ exports.getAuthenticatedUser = (req, res) => {
                 userData.likes.push(doc.data());
             })
 
+            return db.collection('notifications').where('recipient', '==', req.user.handle)
+                .orderBy('createdAt', 'asc')
+                .get()
+        })
+        .then(data => {
+            userData.notifications = [];
+            data.forEach(doc => {
+                userData.notifications.push({
+                    recipient: doc.data().recipient,
+                    sender: doc.data().sender,
+                    createdAt: doc.data().createdAt,
+                    type: doc.data().type,
+                    postId: doc.data().postId,
+                    read: doc.data().read,
+                    notificationId: doc.id,
+                    userImage: doc.data().userImage
+                })
+            })
             return res.json(userData);
         })
         .catch(err => {
             console.error(err)
+            return res.status(500).json({ error: err.code })
+        })
+}
+
+exports.getUserDetails = (req, res) =>{
+    let userData = {};
+    db.doc(`/users/${req.params.handle}`).get()
+        .then(doc => {
+            if(doc.exists){
+                userData.user = doc.data();
+                return db.collection('posts').where('userHandle', '==', req.params.handle)
+                    .orderBy('createdAt', 'desc')
+                    .get()
+            } else return res.status(404).json({ error: 'User does not exist' })
+        })
+        .then(data => {
+            userData.posts = [];
+            data.forEach(doc => {
+                userData.posts.push({
+                    body: doc.data().body,
+                    userHandle: doc.data().handle,
+                    userImage: doc.data().imageUrl,
+                    createdAt: doc.data().createdAt,
+                    tag: doc.data().tag,
+                    likeCount: doc.data().likeCount,
+                    commentCount: doc.data().commentCount,
+                    postId: doc.id
+                })
+            })
+            return res.json(userData);
+        })
+        .catch(err => {
+            console.error(err);
             return res.status(500).json({ error: err.code })
         })
 }
@@ -121,6 +172,8 @@ exports.login = (req, res) => {
             console.error(err)
             if(err.code === 'auth/wrong-password'){
                 return res.status(403).json({ general: 'Incorrect user information' })
+            } else if(err.code === 'auth/user-not-found'){
+                return res.status(403).json({ general: 'User does not exist' })
             } else return res.status(500).json({error: err.code})
         })
 }
@@ -143,7 +196,8 @@ exports.uploadImage = (req, res) =>{
         
         const imageExtension = filename.split('.')[filename.split('.').length - 1];
         //sequinsial number for filename followed by extension for online labeling
-        imageFileName = `${Math.round(Math.random()*10000000000)}.${imageExtension}`;
+        // imageFileName = `${Math.round(Math.random()*10000000000)}.${imageExtension}`;
+        imageFileName = `${req.user.handle}.${imageExtension}`;
         const filePath =  path.join(os.tmpdir(), imageFileName);
         imageToBeUploaded = { filePath, mimetype };
         file.pipe(fs.createWriteStream(filePath));
@@ -173,4 +227,20 @@ exports.uploadImage = (req, res) =>{
         })
     })
     busboy.end(req.rawBody);
+}
+
+exports.markNotificationsRead = (req, res) =>{
+    let batch = db.batch();
+    req.body.forEach(notificationId => {
+        const notification = db.doc(`/notifications/${notificationId}`);
+        batch.update(notification, { read: true });
+    });
+    batch.commit()
+        .then(() => {
+            return res.json({ message: 'Notifications marked read'})
+        })
+        .catch(err => {
+            console.error(err);
+            return res.status(500).json({ error: err })
+        })
 }
