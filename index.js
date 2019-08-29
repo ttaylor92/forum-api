@@ -3,21 +3,22 @@ const app = require('express')();
 const { db } = require('./utilities/admin');
 
 //Handlers
-const { 
-    getAllPosts, 
-    createNewPost, 
-    postNewComment, 
-    getPost, 
-    likeComments, 
-    unlikeComments, 
-    deletePost 
-} = require('./handlers/posts'); 
+const {
+    getAllPosts,
+    createNewPost,
+    postNewComment,
+    getPost,
+    getPostsByTag,
+    likeComments,
+    unlikeComments,
+    deletePost
+} = require('./handlers/posts');
 
-const { 
-    signup, 
-    login, 
-    uploadImage, 
-    addUserDetails, 
+const {
+    signup,
+    login,
+    uploadImage,
+    addUserDetails,
     getAuthenticatedUser,
     getUserDetails,
     markNotificationsRead
@@ -33,6 +34,7 @@ app.delete('/posts/:postId', FBAuth, deletePost)
 //the colon tells the route that it needs this parameter
 app.post('/posts/:postId/comment', FBAuth, postNewComment)
 app.get('/posts/:postId', getPost)
+app.get('/posts/tag/:tag', getPostsByTag)
 app.get('/posts/:postId/like', FBAuth, likeComments)
 app.get('/posts/:postId/unlike', FBAuth, unlikeComments)
 

@@ -9,6 +9,7 @@ exports.getAllPosts = (req, res) => {
             data.forEach(doc => {
                 posts.push({
                     postId: doc.id,
+                    title: doc.data().title,
                     body: doc.data().body,
                     userHandle: doc.data().userHandle,
                     createdAt: doc.data().createdAt,
@@ -23,12 +24,40 @@ exports.getAllPosts = (req, res) => {
         .catch(err => console.error(err));
 }
 
+exports.getPostsByTag = (req, res) => {
+  db.collection('posts')
+    .where('tag', '==', req.params.tag)
+    .orderBy('createdAt', 'desc')
+    .get()
+    .then(snapshot => {
+      let data = [];
+      if(snapshot.empty){
+        return res.status(404).json({ error: 'No posts with that tag found'})
+      } else snapshot.forEach(doc => {
+        data.push({
+          postId: doc.id,
+          title: doc.data().title,
+          body: doc.data().body,
+          userHandle: doc.data().userHandle,
+          createdAt: doc.data().createdAt,
+          tag: doc.data().tag,
+          imageUrl: doc.data().userImage,
+          likeCount: doc.data().likeCount,
+          commentCount: doc.data().commentCount
+        })
+      })
+      return res.json(data)
+    })
+    .catch(err => console.error(err))
+}
+
 exports.createNewPost = (req, res) => {
-    if(req.body.body.trim() === ''){
+    if(req.body.body.trim() === '' && req.body.title.trim() === '' && req.body.tag.trim() === ''){
         return res.status(400).json({ body: 'Body must not be empty'})
     }
 
     const newPost = {
+        title: req.body.title,
         body: req.body.body,
         userHandle: req.user.handle,
         userImage: req.user.imageUrl,
