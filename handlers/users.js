@@ -8,10 +8,14 @@ firebase.initializeApp(config);
 
 exports.signup = (req, res) => {
     const newUser = {
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
         email: req.body.email,
         password: req.body.password,
         confirmPassword: req.body.confirmPassword,
-        handle: req.body.handle
+        handle: req.body.handle,
+        dob: req.body.dob,
+        country: req.body.country
     }
 
     const { valid, errors } = validateSignupData(newUser);
@@ -37,8 +41,12 @@ exports.signup = (req, res) => {
             const userCredentials = {
                 handle: newUser.handle,
                 email: newUser.email,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName,
                 createdAt: new Date().toISOString(),
                 imageUrl: `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${noImage}?alt=media`,
+                dob: newUser.dob,
+                country: newUser.country,
                 userId
             }
 
@@ -171,9 +179,11 @@ exports.login = (req, res) => {
         .catch(err => {
             console.error(err)
             if(err.code === 'auth/wrong-password'){
-                return res.status(403).json({ general: 'Incorrect user information' })
+                return res.status(403).json({ password: 'Incorrect user information' })
             } else if(err.code === 'auth/user-not-found'){
-                return res.status(403).json({ general: 'User does not exist' })
+                return res.status(403).json({ email: 'User does not exist' })
+            } else if (err.code === 'auth/invalid-email'){
+                return res.status(403).json({ email: 'Invalid email address' })
             } else return res.status(500).json({error: err.code})
         })
 }
@@ -193,7 +203,7 @@ exports.uploadImage = (req, res) =>{
         if(mimetype !== 'image/jpeg' && mimetype !== 'image/png'){
             return res.status(400).json({ error: 'Incorrect filetype submitted'})
         }
-        
+
         const imageExtension = filename.split('.')[filename.split('.').length - 1];
         //sequinsial number for filename followed by extension for online labeling
         // imageFileName = `${Math.round(Math.random()*10000000000)}.${imageExtension}`;
